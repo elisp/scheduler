@@ -1,0 +1,28 @@
+{
+  "name": "redis-scheduler",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Scheduler library using Redis",
+  "main": "index.js",
+  "scripts": {
+    "db:isalive": "sh ./bash-scripts/wait-for-db.sh",
+    "d": "nodemon --inspect=5858 index.js",
+    "start": "node index.js",
+    "wait:db:start:api": "npm run db:isalive && npm start",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Eli Spitzer",
+  "license": "ISC",
+  "dependencies": {
+    "body-parser": "^1.18.2",
+    "express": "^4.16.2",
+    "joi": "^13.0.1",
+    "nodemon": "^1.12.1",
+    "redis": "^2.8.0",
+    "winston": "^2.4.0"
+  },
+  "devDependencies": {
+    "eslint": "^4.10.0",
+    "eslint-plugin-node": "^5.2.1"
+  }
+}

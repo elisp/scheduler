@@ -1,6 +1,6 @@
 'use strict';
 
-const logger = require('winston');
+const logger = require('./logger');
 const express = require('express');
 const bodyParser = require('body-parser');
 const config = require('./config');
@@ -11,6 +11,9 @@ scheduler.initListener();
 const app = express();
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
+
+logger.debug("Overriding 'Express' logger");
+require('./requests-logger').init(app);
 
 require('./api').init(app);
 

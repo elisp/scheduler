@@ -1,7 +1,7 @@
 'use strict';
 
 const joi = require('joi');
-const logger = require('winston');
+const logger = require('../logger');
 const scheduler = require('../models/scheduler');
 
 const envVarsSchema = joi.object({

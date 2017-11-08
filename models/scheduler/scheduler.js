@@ -1,6 +1,6 @@
 'use strict';
 
-const logger = require('winston');
+const logger = require('../../logger');
 const config = require('./config');
 const redis = require('redis');
 const client = redis.createClient({ host: config.redis_host, port: config.redis_port });

@@ -2,18 +2,13 @@
 
 const os = require('os');
 const cluster = require('cluster');
-const logger = require('winston');
+const logger = require('./logger');
 const config = require('./config');
-
-logger.default.transports.console.colorize = true;
-logger.default.transports.console.timestamp = true;
-logger.default.transports.console.prettyPrint = config.env === 'development';
-logger.level = config.logger.level;
 
 if (cluster.isMaster) {
   const cpus = os.cpus().length;
 
-  // In order to simulate multiple services behind load balancer, 
+  // In order to simulate multiple services behind load balancer,
   // I'm using the built-in node cluster class
   // And creating a child process per CPU
   logger.info(`[${process.pid}] Forking for ${cpus} CPUs`);
@@ -22,10 +17,10 @@ if (cluster.isMaster) {
   }
 
   // In case a sub-process crashed, it send a 'exit' message
-  // Once we get this message, I'd like to create another 
+  // Once we get this message, I'd like to create another
   // child process instead.
   cluster.on('exit', (worker, code, signal) => {
-    // this check is for not creating a new process when 
+    // this check is for not creating a new process when
     // the exit was initiated by us (using the kill command)
     if (code !== 0 && !worker.exitedAfterDisconnect) {
       logger.log(`API service ${worker.id} crashed. ` +

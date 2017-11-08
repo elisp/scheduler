@@ -1,7 +1,7 @@
 'use strict';
 
 const joi = require('joi');
-const logger = require('winston');
+const logger = require('../../logger');
 
 const envVarsSchema = joi.object({
   REDIS_HOST: joi.string().required(),

@@ -3,7 +3,7 @@ services:
   api:
     container_name: api
     build: .
-    env_file: dockerfile.env
+    env_file: .env
     command: npm run wait:db:start:api
     volumes:
       -  .:/usr/src/app

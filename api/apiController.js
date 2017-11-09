@@ -10,13 +10,13 @@ const envVarsSchema = joi.object({
 }).unknown()
   .required();
 
-exports.echoAtTime = function (req, res) {
+exports.echoAtTime = async function (req, res) {
   try {
     const postVars = joi.attempt(req.body, envVarsSchema);
     const time = new Date(postVars.time);
     const message = postVars.message;
 
-    scheduler.addScheduledJob(time, message);
+    await scheduler.addScheduledJob(time, message);
     res.sendStatus(200);
   } catch (err) {
     logger.error(err);

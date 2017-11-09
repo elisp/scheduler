@@ -1,54 +1,84 @@
 'use strict';
 
+const bluebird = require('bluebird');
+const moment = require('moment');
+const redis = require('redis');
 const logger = require('../../logger');
 const config = require('./config');
-const redis = require('redis');
 const client = redis.createClient({ host: config.redis_host, port: config.redis_port });
-const REDIS_KEY = 'jobs set'; // this key represets a sorted set by job time and its message
+const REDIS_QUEUE = 'jobs:set'; // this key represets a sorted set by job time and its message
+const REDIST_COUNTER = "jobs:count";
+bluebird.promisifyAll(redis);
 
-function addScheduledJob(time, message) {
-  time = new Date(new Date(time).toUTCString());
-  try {
-    client.zadd(REDIS_KEY, time.getTime(), message);
-
-    logger.debug(`[${process.pid}] addScheduledJob ${time}, ${message}`);
-  }
-  catch (err) {
-    logger.error(err);
-  }
+async function reset() {
+  await client.del(REDIS_QUEUE);
+  await client.del(REDIST_COUNTER);
 }
 
-function initListener() {
-  // const near = Math.ceil(Math.random() * 5),
-  //     far = Math.ceil(Math.random() * 10)
-  // addScheduledJob(Date.now() + near * 1000, `this is message 1 to be displayed after ${near} seconds`);
-  // addScheduledJob(Date.now() + far * 1000, `and this is message 2 to be displayed after ${far} seconds`);
+function addScheduledJob(time, message) {
+  time = moment.utc(time);
+  return new Promise((resolve, reject) => {
+    try {
+      client.incr(REDIST_COUNTER, (err, id) => {
+        let data = {
+          message: message,
+          id: id,
+          time
+        };
+        let redis_data = JSON.stringify(data);
+        client.zadd(REDIS_QUEUE, time.valueOf(), redis_data);
+        logger.debug(`[${process.pid}] addScheduledJob ${time}, ${message}`);
+        resolve(data);
+      });
+    }
+    catch (err) {
+      reject(err);
+    }
+  });
+}
 
-  logger.debug(`[${process.pid}] Starting scheduler, interval ${config.scheduling_interval}`);
-
-  setInterval(() => {
-    let now = new Date(new Date().toUTCString()).getTime();
+function executePendingJobs(time) {
+  return new Promise((resolve, reject) => {
+    time = time || moment.utc().valueOf();
     client.multi()
-      .zrangebyscore(REDIS_KEY, 0, now)
-      .zremrangebyscore(REDIS_KEY, 0, now)
+      .zrangebyscore(REDIS_QUEUE, 0, time)
+      .zremrangebyscore(REDIS_QUEUE, 0, time)
       .exec((error, data) => {
         if (error) {
           logger.error(error);
+          reject(error);
         } else {
           const jobList = data[0];
           if (jobList && jobList.length) {
-            logger.debug(`[${process.pid}] message: ${jobList}`);
+            let result = [];
+            jobList.forEach(jopbData => {
+              let job = JSON.parse(jopbData);
+              result.push(job);
+              logger.debug(`[${process.pid}] message: ${job.message}`);
+            });
+            resolve(result);
           } else {
             if (config.log_empty_queue) {
               logger.debug(`[${process.pid}] no jobs`);
             }
+            resolve();
           }
         }
       });
+  });
+}
+
+function initListener() {
+  logger.debug(`[${process.pid}] Starting scheduler, interval ${config.scheduling_interval}`);
+
+  setInterval( async () => {
+    await executePendingJobs();
   }, config.scheduling_interval * 1000);
 }
 
 module.exports = {
   addScheduledJob,
-  initListener
+  initListener,
+  executePendingJobs,
+  reset
 };

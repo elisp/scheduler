@@ -40,38 +40,44 @@ function addScheduledJob(time, message) {
 function executePendingJobs(time) {
   return new Promise((resolve, reject) => {
     time = time || moment.utc().valueOf();
-    client.multi()
-      .zrangebyscore(REDIS_QUEUE, 0, time)
-      .zremrangebyscore(REDIS_QUEUE, 0, time)
-      .exec((error, data) => {
-        if (error) {
-          logger.error(error);
-          reject(error);
+    client.zrangebyscore(REDIS_QUEUE, 0, time, (err, range) => {
+      let multi = client.multi();
+      let result = [];
+      if (err) {
+        logger.error(err);
+        reject(err);
+      } else {
+        const jobList = range;
+        if (jobList && jobList.length) {
+          jobList.forEach(jopbData => {
+            let job = JSON.parse(jopbData);
+            result.push(job);
+            logger.verbose(`[${process.pid}] message: ${job.message}`);
+          });
         } else {
-          const jobList = data[0];
-          if (jobList && jobList.length) {
-            let result = [];
-            jobList.forEach(jopbData => {
-              let job = JSON.parse(jopbData);
-              result.push(job);
-              logger.verbose(`[${process.pid}] message: ${job.message}`);
-            });
-            resolve(result);
-          } else {
-            if (config.log_empty_queue) {
-              logger.verbose(`[${process.pid}] no jobs`);
-            }
-            resolve();
+          if (config.log_empty_queue) {
+            logger.verbose(`[${process.pid}] no jobs`);
           }
         }
-      });
+      }
+      multi.zrangebyscore(REDIS_QUEUE, 0, time)
+        .zremrangebyscore(REDIS_QUEUE, 0, time)
+        .exec((error, data) => {
+          if (error) {
+            logger.error(error);
+            reject(error);
+          } else {
+            resolve(result);
+          }
+        });
+    });
   });
 }
 
 function initListener() {
   logger.debug(`[${process.pid}] Starting scheduler, interval ${config.scheduling_interval}`);
 
-  setInterval( async () => {
+  setInterval(async () => {
     await executePendingJobs();
   }, config.scheduling_interval * 1000);
 }

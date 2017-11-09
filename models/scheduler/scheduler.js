@@ -27,7 +27,7 @@ function addScheduledJob(time, message) {
         };
         let redis_data = JSON.stringify(data);
         client.zadd(REDIS_QUEUE, time.valueOf(), redis_data);
-        logger.debug(`[${process.pid}] addScheduledJob ${time}, ${message}`);
+        logger.verbose(`[${process.pid}] addScheduledJob ${time}, ${message}`);
         resolve(data);
       });
     }
@@ -54,12 +54,12 @@ function executePendingJobs(time) {
             jobList.forEach(jopbData => {
               let job = JSON.parse(jopbData);
               result.push(job);
-              logger.debug(`[${process.pid}] message: ${job.message}`);
+              logger.verbose(`[${process.pid}] message: ${job.message}`);
             });
             resolve(result);
           } else {
             if (config.log_empty_queue) {
-              logger.debug(`[${process.pid}] no jobs`);
+              logger.verbose(`[${process.pid}] no jobs`);
             }
             resolve();
           }

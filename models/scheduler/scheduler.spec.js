@@ -29,6 +29,19 @@ describe('Scheduler', () => {
         });
     });
 
+    it('two similar jobs different ids', (done) => {
+      let time = moment.utc();
+      let later = time.add(5);
+      scheduler.addScheduledJob(time.valueOf(), "message")
+        .then((job1) => {
+          scheduler.addScheduledJob(time.valueOf(), "message")
+            .then((job2) => {
+              expect(job1.id).not.to.eql(job2.id);
+              done();
+            });
+        });
+    });
+
     it('should allow adding the job details twice', (done) => {
       let time = moment.utc();
       let later = time.add(5);
@@ -44,7 +57,6 @@ describe('Scheduler', () => {
             });
         });
     });
-
   });
 
   // describe('.handle jobs', () => {
